@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--namespace:映射文件的命名空间，规范是映射文件的全路径-->
+<!--作用:是一个路径，用来查找 下面的id-->
+<mapper namespace="com.xiexin.dao.PersonDao">
+    <resultMap id="BaseResultMap" type="com.xiexin.bean.Person">
+        <!--下面的 标签要映射到实体类-->
+        <!--id 只有1个-->
+        <!--column 是数据库中的类名-->
+        <!--property 是实体类中的属性 一般是驼峰-->
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="gender" property="gender"/>
+        <result column="birthday" property="birthday"/>
+        <result column="address" property="address"/>
+        <result column="score" property="score"/>
+    </resultMap>
+
+    <!--sql片段-->
+    <sql id="allColumn">
+        id,name,gender,birthday,address
+    </sql>
+
+    <!--隐藏生日的sql片段-->
+    <sql id="birthdayColumn">
+        id,name,gender,birthday,address
+    </sql>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        select * from person
+    </select>
+
+    <!--sql语句中携带参数，其实就是值得 where 语句-->
+    <!--select * from person where gender = 2-->
+    <!--select * from person where gender = #{sex}-->
+    <select id="selectPersonBySex" resultMap="BaseResultMap" parameterType="int">
+        select <include refid="birthdayColumn"/> from person where gender = #{sex}
+    </select>
+
+    <!--查总条数：  select count(*) from person;   // 多少条 是一个 int 类型-->
+    <select id="selectCount" resultType="long">
+        select count(*) from person
+    </select>
+
+    <!--查询女生总条数有几个： select count(*) from person where sex = 2 and score > 100-->
+    <!--当前端 传来 多个参数的时候，你需要看这几个参数，是否是同一个类中的属性(这个是单表)，如果是 那么直接可以用这个类做参数-->
+    <!--如果不是同一个类中的（这个是多表），那么 可以手写一个 参数的实体类（DTO） ，或者使用Map 做参数-->
+    <select id="selectCountByParam01" resultType="long" parameterType="com.xiexin.bean.Person">
+        select count(*) from person where gender = #{gender} and score > #{score}
+    </select>
+
+    <!--查询性别是2，且 生日大于 2020-09-07 的人有哪些？-->
+    <!--select * from person gender = #{gender} and birthday >= #{birthday}-->
+    <select id="selectCountByParam02" resultMap="BaseResultMap" parameterType="com.xiexin.bean.Person">
+        <![CDATA[
+        select * from person where gender = #{gender} and birthday < #{birthday}
+        ]]>
+    </select>
+
+    <!--子查询-->
+    <!--查询分值最高的人是谁-->
+    <!--select * from person where score = (select max(score) from person)-->
+    <select id="selectPersonByZi" resultMap="BaseResultMap">
+        select * from person where score = (select max(score) from person)
+    </select>
+
+    <!--分组查询-->
+    <!--2. 男生和女生的平均分值各是多少 ？-->
+    <!--select gender,avg(score) as avgScore from person GROUP BY gender;-->
+    <select id="selectAvgScore" resultType="com.xiexin.bean.dto.PersonDTO">
+        select gender , avg(score) as avgScore from person GROUP BY gender
+    </select>
+
+    <!--男生和女生的平均分值 > 200的是什么-->
+    <!--select gender , avg(score) as avgScore from person GROUP BY gender having avg(score > 200)-->
+    <select id="selectAvgScoreParam" resultType="com.xiexin.bean.dto.PersonDTO" parameterType="int">
+        select gender , avg(score) as avgScore from person GROUP BY gender having avg(score) > #{score}
+    </select>
+
+    <!--用map可以接收任何的数据 ，常见于 多表-->
+    <select id="selectAvgScoreParam02" resultType="map" parameterType="int">
+       select gender , avg(score) as avgScore from person GROUP BY gender having avg(score) > #{score}
+    </select>
+
+    <!--查询姓 孙 的 第一种方式： 使用 $ 去拼接，但是这样不好，因为是拼接的，sql编译的时候没有问号，容易被黑客注入，不安全-->
+    <!--select * from person where name like '孙%'-->
+    <select id="selectPersonByLike" resultMap="BaseResultMap" parameterType="string">
+        select * from person where name like '${name}%'
+    </select>
+
+    <!--查询姓 孙 的 第二种方式： 使用 sql语句concat 连接-->
+    <select id="selectPersonByLike02" resultMap="BaseResultMap" parameterType="string">
+        select * from person where name like concat ('%',#{name},'%')
+    </select>
+
+    <!--查询姓 孙 的 第三种方式： -->
+    <select id="selectPersonByLike03" resultMap="BaseResultMap" parameterType="string">
+        select * from person where name like "%"#{name}"%"
+    </select>
+
+    <!--增加一条数据 insert into person (id, name, gender, birthday, address, score) values (null, #{name})-->
+    <insert id="insertPerson" parameterType="com.xiexin.bean.Person">
+        insert into person (id, name, gender, birthday, address, score)
+        values (null, #{name}, #{gender}, #{birthday}, #{address}, #{score})
+    </insert>
+</mapper>
